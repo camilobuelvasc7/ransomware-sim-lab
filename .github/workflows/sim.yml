@@ -20,14 +20,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      # 👇 Helpful: confirm the repo actually has your files
+      # Debug: show what files are in the repo
       - name: List repo contents (debug)
         shell: pwsh
         run: |
           Write-Host "PWD:" (Get-Location)
           Get-ChildItem -Recurse | Select-Object FullName
 
-      # 👇 Safety net: create sample_data if missing (won't hurt if it already exists)
+      # Safety net: create sample files if they're missing
       - name: Prepare sample data (if missing)
         shell: pwsh
         run: |
@@ -41,13 +41,13 @@ jobs:
         run: |
           $keyArg = ""
           if ("${{ github.event.inputs.passphrase }}" -ne "") {
-            $keyArg = '--key "${{ github.event.inputs.passphrase }}"'
+            $keyArg = "--key=${{ github.event.inputs.passphrase }}"
           }
           python --version
-          python simulator.py --lab-dir lab_output --source sample_data --ext locked $keyArg
+          python simulator.py --lab-dir lab_output --source sample_data --ext=locked $keyArg
 
       - name: Upload artifacts (log + ransom note + encrypted files)
-        if: always()   # upload even if a later step fails
+        if: always()   # still upload even if a later step fails
         uses: actions/upload-artifact@v4
         with:
           name: lab-artifacts
