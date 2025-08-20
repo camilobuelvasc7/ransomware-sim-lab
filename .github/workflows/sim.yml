@@ -39,15 +39,16 @@ jobs:
       - name: Run simulation (encrypt)
         shell: pwsh
         run: |
-          $keyArg = ""
-          if ("${{ github.event.inputs.passphrase }}" -ne "") {
-            $keyArg = "--key=${{ github.event.inputs.passphrase }}"
+          # Build a safe argument array so quoting never breaks
+          $argsList = @("--lab-dir","lab_output","--source","sample_data")  # uses default ext=locked
+          if ("${{ github.event.inputs.passphrase }}") {
+            $argsList += @("--key","${{ github.event.inputs.passphrase }}")
           }
           python --version
-          python simulator.py --lab-dir lab_output --source sample_data --ext=locked $keyArg
+          python simulator.py @argsList
 
       - name: Upload artifacts (log + ransom note + encrypted files)
-        if: always()   # still upload even if a later step fails
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lab-artifacts
