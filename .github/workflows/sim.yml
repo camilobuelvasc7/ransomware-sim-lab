@@ -1,0 +1,43 @@
+name: Ransomware Behaviour Simulation (Safe)
+
+on:
+  workflow_dispatch:
+    inputs:
+      passphrase:
+        description: "Optional passphrase for key derivation (leave empty to use default)"
+        required: false
+
+jobs:
+  simulate:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run simulation (encrypt)
+        shell: pwsh
+        run: |
+          # Build the --key argument only if a passphrase was provided
+          $keyArg = ""
+          if ("${{ github.event.inputs.passphrase }}" -ne "") {
+            $keyArg = '--key "${{ github.event.inputs.passphrase }}"'
+          }
+          python simulator.py --lab-dir lab_output --source sample_data --ext locked $keyArg
+
+      - name: Upload artifacts (log + ransom note + encrypted files)
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-artifacts
+          path: |
+            lab_output/**
+            !lab_output/working_copy/**
+
+      - name: Show last 20 log lines (for quick proof)
+        shell: pwsh
+        run: Get-Content -Path lab_output/ransomware_behavior.log | Select-Object -Last 20
