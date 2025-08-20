@@ -20,17 +20,34 @@ jobs:
         with:
           python-version: "3.11"
 
+      # 👇 Helpful: confirm the repo actually has your files
+      - name: List repo contents (debug)
+        shell: pwsh
+        run: |
+          Write-Host "PWD:" (Get-Location)
+          Get-ChildItem -Recurse | Select-Object FullName
+
+      # 👇 Safety net: create sample_data if missing (won't hurt if it already exists)
+      - name: Prepare sample data (if missing)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "sample_data")) { New-Item -ItemType Directory -Path sample_data | Out-Null }
+          if (-not (Test-Path "sample_data/notes.txt"))   { Set-Content -Path sample_data/notes.txt  -Value 'Team notes for simulation. This is harmless sample content.' }
+          if (-not (Test-Path "sample_data/report.txt"))  { Set-Content -Path sample_data/report.txt -Value 'Quarterly report draft. Sample content for lab use.' }
+          if (-not (Test-Path "sample_data/budget.csv"))  { Set-Content -Path sample_data/budget.csv -Value "item,amount`nlaptops,2400`ntraining,1500" }
+
       - name: Run simulation (encrypt)
         shell: pwsh
         run: |
-          # Build the --key argument only if a passphrase was provided
           $keyArg = ""
           if ("${{ github.event.inputs.passphrase }}" -ne "") {
             $keyArg = '--key "${{ github.event.inputs.passphrase }}"'
           }
+          python --version
           python simulator.py --lab-dir lab_output --source sample_data --ext locked $keyArg
 
       - name: Upload artifacts (log + ransom note + encrypted files)
+        if: always()   # upload even if a later step fails
         uses: actions/upload-artifact@v4
         with:
           name: lab-artifacts
@@ -39,5 +56,11 @@ jobs:
             !lab_output/working_copy/**
 
       - name: Show last 20 log lines (for quick proof)
+        if: always()
         shell: pwsh
-        run: Get-Content -Path lab_output/ransomware_behavior.log | Select-Object -Last 20
+        run: |
+          if (Test-Path lab_output/ransomware_behavior.log) {
+            Get-Content -Path lab_output/ransomware_behavior.log | Select-Object -Last 20
+          } else {
+            Write-Host "No log file found."
+          }
