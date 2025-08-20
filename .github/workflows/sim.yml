@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Debug: show what files are in the repo
+      # Debug: show repo contents so we know files are present
       - name: List repo contents (debug)
         shell: pwsh
         run: |
@@ -46,7 +46,31 @@ jobs:
           }
           python --version
           python simulator.py @argsList
+          Write-Host "=== Simulation complete ==="
 
+      # Show the ransom note text directly in the job logs
+      - name: Show ransom note in logs
+        shell: pwsh
+        run: |
+          Write-Host "=== Ransom Note Preview ==="
+          if (Test-Path "lab_output/README_TO_DECRYPT.txt") {
+            Get-Content -Path "lab_output/README_TO_DECRYPT.txt"
+          } else {
+            Write-Host "No ransom note found."
+          }
+
+      # List all .locked files that were produced
+      - name: Show encrypted files in logs
+        shell: pwsh
+        run: |
+          Write-Host "=== Encrypted Files (.locked) ==="
+          if (Test-Path "lab_output") {
+            Get-ChildItem -Recurse "lab_output" | Where-Object { $_.Extension -eq ".locked" } | Select-Object FullName, Length
+          } else {
+            Write-Host "lab_output not found."
+          }
+
+      # Upload artifacts so you can download evidence (log, note, encrypted files)
       - name: Upload artifacts (log + ransom note + encrypted files)
         if: always()
         uses: actions/upload-artifact@v4
@@ -56,12 +80,14 @@ jobs:
             lab_output/**
             !lab_output/working_copy/**
 
+      # Also print the last 20 lines from the behaviour log, if present
       - name: Show last 20 log lines (for quick proof)
         if: always()
         shell: pwsh
         run: |
-          if (Test-Path lab_output/ransomware_behavior.log) {
-            Get-Content -Path lab_output/ransomware_behavior.log | Select-Object -Last 20
+          if (Test-Path "lab_output/ransomware_behavior.log") {
+            Write-Host "=== Log tail (ransomware_behavior.log) ==="
+            Get-Content -Path "lab_output/ransomware_behavior.log" | Select-Object -Last 20
           } else {
             Write-Host "No log file found."
           }
